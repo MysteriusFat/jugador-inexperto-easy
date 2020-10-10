@@ -7,7 +7,6 @@ import threading
 
 URL_VOTES = 'https://votes.flowics.com/paul/public/votes/o/12416/5f492f838d6fc400476c40b5'
 URL_GETS = 'https://paul.flowics.com/paul/public/polls/12416/5f492f838d6fc400476c40b5?profile=interactive'
-
 n_votes = 0
 
 # Headers se usan para todas las requests
@@ -24,7 +23,7 @@ def GetVotes():
 	session = requests.Session()
 	r = session.get(URL_GETS, headers=headers)
 	res = []
-	# print(r.status_code)
+	print(r.status_code)
 	for player in r.json()['polls'][0]['items']:
 		res.append({'name':player['name'], 'id': player['id'], 'votes':player['results']['count']})
 	return res
@@ -37,12 +36,12 @@ def Vote(session, filename):
 
 
 def ShowVotes():
-	table += "+---------------------------+--------------------------------------+------------+"
-	table += "| {:25} | {:30}       | {:10} |".format('name', 'id', 'votes')
-	table += "+---------------------------+--------------------------------------+------------+"
+	table = "+---------------------------+--------------------------------------+------------+\n"
+	table += "| {:25} | {:30}       | {:10} |\n".format('name', 'id', 'votes')
+	table += "+---------------------------+--------------------------------------+------------+\n"
 	for player in GetVotes():
-		table += "| {:25} | {:30} | {:10} |".format(player['name'], player['id'], player['votes'])
-	table += "+---------------------------+--------------------------------------+------------+"
+		table += "| {:25} | {:30} | {:10} |\n".format(player['name'], player['id'], player['votes'])
+	table += "+---------------------------+--------------------------------------+------------+\n"
 	print(table)
 
 def MakeVotes(payload, stop):
