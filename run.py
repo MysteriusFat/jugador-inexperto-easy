@@ -1,21 +1,16 @@
-import stem
-import stem.connection
-
-import sys 
+import sys
 import requests
-import time 
-import os 
-import socket
-import socks 
-
-from stem import Signal
-from stem.control import Controller
+import time
+import os
+import argparse
+import threading
 
 URL_VOTES = 'https://votes.flowics.com/paul/public/votes/o/12416/5f492f838d6fc400476c40b5'
-URL_GETS = 'https://paul.flowics.com/paul/public/polls/12416/5f492f838d6fc400476c40b5?profile=interactive' 
-session = requests.Session()
+URL_GETS = 'https://paul.flowics.com/paul/public/polls/12416/5f492f838d6fc400476c40b5?profile=interactive'
 
-# Headers se usan para todas las requests 
+n_votes = 0
+
+# Headers se usan para todas las requests
 headers = {
     'User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:81.0) Gecko/20100101 Firefox/81.0',
     'Accept': '*/*',
@@ -25,59 +20,70 @@ headers = {
     'Origin': 'https://viz.flowics.com',
 }
 
-def renew_connection():
-	with Controller.from_port(port = 9050) as controller:
-		controller.authenticate(password = 'Jugodepinavall3')
-		controller.signal(Signal.NEWNYM)
-		controller.close()
-
-
-def GetVotes(): 
+def GetVotes():
+	session = requests.Session()
 	r = session.get(URL_GETS, headers=headers)
-	res = []	
+	res = []
 	# print(r.status_code)
 	for player in r.json()['polls'][0]['items']:
 		res.append({'name':player['name'], 'id': player['id'], 'votes':player['results']['count']})
-	return res 
+	return res
 
-def Vote(filename):
+def Vote(session, filename):
 	with open(filename) as file:
 		payload = file.read()
 		r = session.post(URL_VOTES, data=payload, headers=headers)
-		return r.status_code 
+		return r.status_code
 
 
 def ShowVotes():
-	print("+---------------------------+--------------------------------------+------------+")
-	print(  "| {:25} | {:30}       | {:10} |".format('name', 'id', 'votes')) 
-	print("+---------------------------+--------------------------------------+------------+")
+	table += "+---------------------------+--------------------------------------+------------+"
+	table += "| {:25} | {:30}       | {:10} |".format('name', 'id', 'votes')
+	table += "+---------------------------+--------------------------------------+------------+"
 	for player in GetVotes():
-		print("| {:25} | {:30} | {:10} |".format(player['name'], player['id'], player['votes']))
-	print("+---------------------------+--------------------------------------+------------+")
-	
-if __name__ == '__main__':
-	if len(sys.argv) < 3:
-		print("[!] Select file and time rate")		
-		exit()
+		table += "| {:25} | {:30} | {:10} |".format(player['name'], player['id'], player['votes'])
+	table += "+---------------------------+--------------------------------------+------------+"
+	print(table)
 
-	payload = sys.argv[1]
-	time_rate = int(sys.argv[2])
-	n_votes = 0
-
-	print("\n[*] Payload: {}".format(sys.argv[1]))
-	print("[*] Time rate: {}\n".format(sys.argv[2]))
-		
-	ShowVotes()
- 	
-	while True:
-		time.sleep(time_rate)
-		status = Vote(payload)
-		if status == 204 or status == 200:
+def MakeVotes(payload, stop):
+	session = requests.Session()
+	global n_votes 	
+	while n_votes < stop:
+		status = Vote(session, payload)
+		if status == 200 or status == 204:
 			n_votes += 1
-			print("[+] status {} \t votes: {}".format(status, n_votes))
+			print('[+] status: {} \t votes: {}'.format(status, n_votes))
 		else:
-			print("[!] status {} \t votes: {}".format(status, n_votes))
-			print("[*] Clean cookies ")
+			print('[!] status: {} \t votes: {}'.format(status, n_votes))
+			print('[!] Cleaning cookies')		
 			session.cookies.clear()
-			time.sleep(4)
+			time.sleep(1)
 
+if __name__ == '__main__':	
+	parser = argparse.ArgumentParser()
+	parser.add_argument('-s', '--stop', help='limit votes', type=int, default=1000000000)
+	
+	required = parser.add_argument_group('required arguments')
+	required.add_argument('-p', '--payload', required=True)
+	required.add_argument('-t', '--threads', required=True, type=int)
+
+	argv = parser.parse_args()
+	
+	payload = argv.payload
+	threads = argv.threads
+	stop = argv.stop
+
+	print('[*] payload: {}'.format(payload))
+	print('[*] threads: {}'.format(threads))
+	if stop is not None:
+		print('[*] votes limit: {}'.format(stop))	
+	
+	try:
+		ShowVotes()
+	except:
+		print("[!] No hay partidos activos")
+
+	input('\n[>] Press start')	
+	for i in range(threads):
+		thread = threading.Thread(target=MakeVotes, args=(payload, stop))
+		thread.start()
