@@ -9,6 +9,7 @@ URL_VOTES = 'https://votes.flowics.com/paul/public/votes/o/12416/5f492f838d6fc40
 URL_GETS = 'https://paul.flowics.com/paul/public/polls/12416/5f492f838d6fc400476c40b5?profile=interactive'
 n_votes = 0
 
+
 # Headers se usan para todas las requests
 headers = {
     'User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:81.0) Gecko/20100101 Firefox/81.0',
@@ -51,10 +52,10 @@ def MakeVotes(payload, stop):
 		status = Vote(session, payload)
 		if status == 200 or status == 204:
 			n_votes += 1
-			print('[+] status: {} \t votes: {}'.format(status, n_votes))
+			print('[' + time.ctime() + '] ' + '[+] status: {} \t votes: {} \t\t\t'.format(status, n_votes), end='\r', flush=True)
+        	
 		else:
-			print('[!] status: {} \t votes: {}'.format(status, n_votes))
-			print('[!] Cleaning cookies')		
+			print('[' + time.ctime() + '] ' + '[!] status: {} \t votes: {} \t '.format(status, n_votes), end='\r', flush=True) 		
 			session.cookies.clear()
 			time.sleep(1)
 
