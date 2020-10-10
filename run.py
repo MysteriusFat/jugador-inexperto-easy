@@ -82,6 +82,7 @@ if __name__ == '__main__':
 		ShowVotes()
 	except:
 		print("[!] No hay partidos activos")
+		exit()
 
 	input('\n[>] Press start')	
 	for i in range(threads):
